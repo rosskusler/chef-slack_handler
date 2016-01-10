@@ -22,12 +22,13 @@ require 'net/http'
 require "timeout"
 
 class Chef::Handler::Slack < Chef::Handler
-  attr_reader :webhooks, :username, :config, :timeout, :icon_emoji, :fail_only, :detail_level
+  attr_reader :webhooks, :username, :config, :timeout, :icon_url, :icon_emoji, :fail_only, :detail_level
 
   def initialize(config = {})
     #set defaults for any missing attributes
     @config = config
     @timeout = @config[:timeout] || 15
+    @icon_url = @config[:icon_url]
     @icon_emoji = @config[:icon_emoji] || ':fork_and_knife:'
     @username = @config[:username] || 'chef_handler'
     @webhooks = @config[:webhooks]
@@ -72,7 +73,13 @@ class Chef::Handler::Slack < Chef::Handler
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_NONE
     req = Net::HTTP::Post.new(uri.path, initheader = {'Content-Type' =>'application/json'})
-    req.body = {username: "#{@username}", text: "#{message}", icon_emoji: "#{@icon_emoji}"}.to_json
+    body_obj = {username: "#{@username}", text: "#{message}"}
+    if @icon_url
+      body_obj['icon_url'] = @icon_url
+    else
+      body_obj['icon_emoji'] = @icon_emoji
+    end
+    req.body = body_obj.to_json
     response = http.request(req)
   end
 
